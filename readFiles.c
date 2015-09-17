@@ -266,13 +266,14 @@ tabela *leEnlaces( char enl[CONST], int count){
 router *leInfos(char rout[CONST], int id){
 
   FILE *arq = fopen(rout, "r");
-  router *myRouter = (router *)malloc(sizeof(router));
+  router *myRouter = (router *)malloc(sizeof(router)*vertices);
+  int i = 0;
   if(!myRouter)return NULL;
   //int i,j;
   if(!arq)return NULL;
 
   
-  while(fscanf(arq,"%d %d %s", &(myRouter->id), &(myRouter->port), myRouter->ip)!=EOF)
+  while(fscanf(arq,"%d %d %s", &(myRouter[i++]->id), &(myRouter[i++]->port), myRouter[i++]->ip)!=EOF)
     if(id == myRouter->id)break;
 
   if(id != myRouter->id)return NULL;
