@@ -1,13 +1,24 @@
-OB#include"funcs.h"
-#include<stdio.h> //printf
-#include<string.h> //memset
-#include<stdlib.h> //exit(0);
-#include<arpa/inet.h>
-#include<sys/socket.h>
+#include "funcs.h"
+#include <stdio.h> //printf
+#include <string.h> //memset
+#include <stdlib.h> //exit(0);
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 #define GETFILE 100
 
 int myId;
+int vertices;
+tabela *myConnect = NULL;
+router *myRouter = NULL;
+
+pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void die(char *s){
   
@@ -67,7 +78,7 @@ void server(router *myRouter, tabela *myConnect){
   struct sockaddr_in entrada, saida;
   int s, i, tam = sizeof(saida), recv_len;
   msg buf;
-
+ 
   if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1) die("socket");
 
   memset((char *)&entrada, 0, sizeof(entrada));
@@ -81,7 +92,7 @@ void server(router *myRouter, tabela *myConnect){
   while(1){
     memset(buf.text, '\0', 100);
 
-    if((recv_len = recvfrom(s, buf.text, 100, 0, (struct sockaddr *)&destino, tam))==-1)die("recvfrom()");
+    if((recv_len = recvfrom(s, &buf, 100, 0, (struct sockaddr *)&saida, &tam))==-1)die("recvfrom()");
 
     if(buf.id == myId)
       client(buf, myRouter, myConnect);
@@ -90,7 +101,7 @@ void server(router *myRouter, tabela *myConnect){
       memset(buf.text, '\0', 100);
       strcpy("ack", buf.text);
 
-      if(sendto(s, buf.text, recv_len, 0, (struct sockaddr *)&destino, tam)==-1)
+      if(sendto(s, buf.text, recv_len, 0, (struct sockaddr *)&saida, tam)==-1)
       die("sento()");
 
     }
@@ -103,22 +114,34 @@ void server(router *myRouter, tabela *myConnect){
 
 int main(int argc, char *arq[]){
   //int i,j;
+  pthread_t tids[2];
+  
+  pthread_create(&tids[0], NULL, server, NULL);
+  pthread_create(&tids[1], NULL, client, NULL);
+   
+  
   int  routerId = atoi(arq[1]);
-  char *rout = "roteador.config";
-  char *link = "enlaces.config";
-  tabela *myConnect = NULL;
+  char rout[20] = "roteador.config";
+  char link[20] = "enlaces.config";
+  
+  
   //Leitura dos argumentos via terminal
   myId = routerId; //id globalmente visivel
-  router *myRouter = NULL;
-  //printf("%d %s %s", routerId, rout, link);
   
+  //printf("%d %s %s", routerId, rout, link);
+ 
   if(!(myConnect = leEnlaces(link, vertices =countIn(rout))))return 0;
-     if(!(myRouter = leInfos(rout, routerId))) return 0;
+    
+     
+  if(!(myRouter = leInfos(rout, routerId))) return 0;
+  
+  
 
-     //printf("id : %d \n",myRouter->id);
-     //printf("port: %d \n",myRouter->port);
-     //printf("ip : %s \n", myRouter->ip);
-  /*int count = vertices;
+  /*  printf("id : %d \n",myRouter->id);
+    printf("port: %d \n",myRouter->port);
+    printf("ip : %s \n\n", myRouter->ip);
+  int count = vertices;
+  int i,j;
   for(i = 0; i < count; i++){                                                 
     for(j = 0; j  <count; j++){                                                 
       if(i!=j)                                                                  
@@ -132,8 +155,8 @@ int main(int argc, char *arq[]){
       if(i!=j)                                                                  
         printf("%d ", myConnect[i].idImediato[j]);                              
     }printf("\n"); } */
-
-     server(myRouter,myConnect);
+	 
+   // server(myRouter,myConnect);
      
   return 0;
 }

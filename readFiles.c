@@ -1,8 +1,8 @@
 //Dijktra code
 //http://www.vivaolinux.com.br/script/Algoritmo-de-Dijkstra
 
-#include<string.h>
-#include<math.h>
+#include <string.h>
+#include <math.h>
 #include "funcs.h"
 
 #define CONST 40
@@ -239,7 +239,7 @@ tabela *leEnlaces( char enl[CONST], int count){
   for(i = 1; i <= count; i++)
     for(j = 1; j <= count;j++)
       if(i!=j){
-	myConnect = dijkstra(count,i,j,myConnect);
+		myConnect = dijkstra(count,i,j,myConnect);
       }
 
   //puts("je");
@@ -272,11 +272,12 @@ router *leInfos(char rout[CONST], int id){
   //int i,j;
   if(!arq)return NULL;
 
+	
   
-  while(fscanf(arq,"%d %d %s", &(myRouter[i++]->id), &(myRouter[i++]->port), myRouter[i++]->ip)!=EOF)
-    if(id == myRouter->id)break;
+  while(fscanf(arq,"%d %d %s", &(myRouter[i].id), &(myRouter[i].port), myRouter[i].ip)!=EOF)
+    i++;
 
-  if(id != myRouter->id)return NULL;
+  //if(id != myRouter->id){return NULL;}
 
   fclose(arq);
   return myRouter;

@@ -1,5 +1,5 @@
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CONST 40 //constante para tamanho de arquivo
 #define IP 15
