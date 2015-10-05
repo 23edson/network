@@ -14,6 +14,19 @@ typedef struct tab{
   int *idImediato; //proximo vertice no caminho até idVizinho
 }tabela;
 
+typedef struct mensagem{
+  int idMsg; //identificador da msg
+  int origem; //quem enviou
+  int destino; //para onde vai
+  int entregue; //flag diz que chegou ao destino
+  int nextH; //próximo roteador no caminho
+  char ip[IP]; //ip de quem enviou
+  char text[105]; //mensagem
+  time_t timestamp;
+  int tentativas; //tentativas de envio
+  int ack; //flag para confirmacao
+}msg;
+
 typedef struct fila{
 	int id;
 	msg *mesg;
@@ -26,19 +39,11 @@ typedef struct rt{
   char ip[IP]; //ip
 }router;
 
-typedef struct mensagem{
 
-  int id; //quem enviou
-  int destino; //para onde vai
-  int entregue; //flag diz que chegou ao destino
-  char ip[IP]; //ip de quem enviou
-  char text[105]; //mensagem
-  time_t timestamp;
-  int tentativas; //tentativas de envio
-}msg;
 
 tabela *leEnlaces( char enl[CONST], int count);
 router *leInfos(char rout[CONST], int id);
 int countIn(char rot[CONST]);
-void *enviarMsg(void *data);
-void *server(void *data);
+void enviarMsg(void);
+void server(void);
+void serverControl(void);
