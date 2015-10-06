@@ -59,12 +59,13 @@ void enviarMsg(void){
 	printf("Enviar msg para roteador destino:");
 		scanf("%d", &destino);
 	printf("\n");
-	
+	fgetc(stdin);
 	//pthread_mutex_lock(&count_mutex);
 	if(destino == myRouter->id){
 		printf("Enviar para mim mesmo?\n");
 		continue;
 	}
+	//fflush(stdin);
 	//pthread_mutex_unlock(&count_mutex);
 	if(!(destRouter = leInfos(rout_u, destino))){ printf("Destino invalido\n");}
 	
@@ -87,7 +88,7 @@ void enviarMsg(void){
 		// pthread_mutex_lock(&count_mutex);
 		printf("Msg: ");
 			//gets(message);
-		scanf("%s",message);
+		fgets(message, 100,stdin);
 			
 		//mensg.id = myRouter->id;
 		//mensg.destino = destino;
@@ -100,7 +101,7 @@ void enviarMsg(void){
 		
 		insereFila(&mensg);
 	    printf("ID>::%d e %d\n", mensg.origem, mensg.destino);
-		pthread_mutex_unlock(&count_mutex);usleep(2000000);
+		pthread_mutex_unlock(&count_mutex);usleep(100000);
 		}
 	}
 	 
@@ -115,7 +116,7 @@ int encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
 	
 	router *destRouter = NULL;
 	int t = sizeof(*etc);
-	printf("dest %d\n", buf->destino);
+	//printf("dest %d\n", buf->destino);
 	//if(!(destRouter = leInfos(rout_u, destino))){ printf("Destino invalido\n");}
 	for( i = 0; i < vertices; i++){
 			if(myConnect[myRouter->id-1].idVizinho[i] == buf->destino){
@@ -194,29 +195,41 @@ void server(void){ //Para receber as mensagens
 		pthread_mutex_lock(&count_mutex);
 		if(mensg.destino != myRouter->id){ //caso este nao for o destino
 			msg *r = malloc(sizeof(msg));
+			msg *confr = malloc(sizeof(msg));
+			
+			confr = copyData(confr,&mensg);
+			confr->ack = 1;
+			int back = mensg.origem;
+			confr->origem = mensg.nextH;
+			confr->destino = back;
 			r = copyData(r,&mensg);
+			
+			insereFila(confr);
 			insereFila(r);
 			
 		}
 		else{ //caso este for o destino
-		puts("aqui");
-			msg *conf = malloc(sizeof(msg));
-			conf = copyData(conf, &mensg); 
+		//puts("aqui");
+			 
 			if(!mensg.ack){ //se nao for msg de confirmacao
 					//insereFila(conf);
-					
-				
-				printf("Roteador : %d recebeu a msg de %d\n", myRouter->id, mensg.origem);
-				printf("msg: %s\n", mensg.text);
-				conf->entregue = 1;
-				//conf = &mensg;
+				msg *conf = malloc(sizeof(msg));
+				int back = mensg.origem;
+				conf->origem = mensg.nextH;
+				conf->destino = back;
+				conf = copyData(conf, &mensg);
 				insereFila(conf);
+				printf("Roteador : %d recebeu a msg de %d\n", myRouter->id, mensg.origem);
+				printf("Msg: %s\n", mensg.text);
+				//conf->entregue = 1;
+				//conf = &mensg;
+				//insereFila(conf);
 			}
-			else if(mensg.ack && mensg.entregue){//caso recebe a confirmacao
-				printf("Msg de %d para %d foi confirmada!!\n", myRouter->id, mensg.origem);
-				printf("\n%d %d %d\n", filas[i].mesg->idMsg, mensg.idMsg, filas[i].mesg->destino);
+			else{//caso recebe a confirmacao
+				printf("Msg foi encaminhada parao o proximo roteador no caminho!!\n");
+				/*printf("\n%d %d %d\n", filas[i].mesg->idMsg, mensg.idMsg, filas[i].mesg->destino);*/
  				for(i = 0; i < tamanho; i++){
-					if(filas[i].mesg->idMsg == mensg.idMsg && filas[i].mesg->origem == myRouter->id)
+					if(filas[i].mesg->idMsg == mensg.idMsg && filas[i].mesg->destino == myRouter->id)
 						remove_fix(i);
 						break;
 					
@@ -234,8 +247,8 @@ void serverControl(){
 
   struct sockaddr_in controle;
   time_t back;
-  int save,saveID;
-  int s,i;
+  int save,saveId;
+  int s,i,j;
   //int a;
   msg buf;
  // char buffer[500];
@@ -271,40 +284,40 @@ void serverControl(){
 	 if(tamanho == 0)continue; //fila vazia
 	 
 	 for(i = 0; i < tamanho; i++){
-		 printf("tammmm %d %d\n", tamanho, filas[0].tentativas);
+		 //printf("tammmm %d %d\n", tamanho, filas[0].tentativas);
 		 //usleep(100000);
 		 pthread_mutex_lock(&count_mutex);
 		 msg *conf = (msg *)malloc(sizeof(msg));
 	     
 		 
-		 if(filas[i].mesg->entregue == 1){ //caso recebeu o pacote
-			puts("entregue");
-			 filas[i].mesg->ack = 1; //confirma o pacote
+		/* if(filas[i].mesg->ack){ //caso recebeu o pacote
+			 for(j = 0; j < tamanho; j++){
+				 
+			 }
 			 int aux = filas[i].mesg->origem;
+			 
 			 //modifica para enviar a confirmacao
 			 filas[i].mesg->origem = filas[i].mesg->destino;
 			 filas[i].mesg->destino = aux;
 			 encaminhaMsg(s,&controle,filas[i].mesg);
 			 remove_f();
 			 
-		 }
-		 else if(filas[i].tentativas == 0){ //se a mensagem nao foi enviada, ou seja, veio do usuario
+		 }*/
+		 if(filas[i].tentativas == 0){ //se a mensagem nao foi enviada, ou seja, veio do usuario
 		 puts("orimero");
 		 
-			 if(encaminhaMsg(s,&controle,filas[i].mesg)==0)
-				remove_f();
-			 else{
-				filas[i].timestamp = time(0);
-				filas[i].tentativas++;
-				conf = copyData(conf,filas[i].mesg);
-				save = filas[i].tentativas;
-				back = filas[i].timestamp;
-				saveID = filas[i].id;
-				remove_f();
-				insere_fix(conf,save,back); //coloca no final da fila
-			 }
+			 encaminhaMsg(s,&controle,filas[i].mesg);
+			 filas[i].tentativas++;
+			 filas[i].timestamp = time(0);
+			 save = filas[i].tentativas;
+			 saveId = filas[i].id;
+			 back = filas[i].timestamp;
+			 conf = copyData(conf, filas[i].mesg);
+			 remove_f();
+			 insere_fix(conf, save, saveId, back);
 		 }
-		 else if(filas[i].tentativas > 0 && filas[i].tentativas < 3){
+			
+		 else if(filas[i].tentativas > 0 && filas[i].tentativas < 3 && filas[i].mesg->ack == 0){
 			 
 			 
 			 double tempo = difftime(time(0), filas[i].timestamp);
@@ -312,15 +325,15 @@ void serverControl(){
 			 if(filas[i].tentativas < 3 && tempo > 2){ //max 3 tentativas
 				printf("Retransmissao\n");
 				encaminhaMsg(s,&controle, filas[i].mesg);
-				filas[i].timestamp = time(0);
+				//filas[i].timestamp = time(0);
 				filas[i].tentativas++;
 				conf = copyData(conf,filas[i].mesg);
 				save = filas[i].tentativas;
-				back = filas[i].timestamp;
-				saveID = filas[i].id;
+				back = time(0);
+				saveId = filas[i].id;
 				remove_f();
 				
-				insere_fix(conf,save,back); //coloca no final da fila
+				insere_fix(conf,save,saveid,back); //coloca no final da fila
 			 }
 			 else if(filas[i].tentativas < 3 && tempo <= 2){ //2s
 				// encaminhaMsg(s,&controle, filas[i].mesg);
@@ -330,14 +343,14 @@ void serverControl(){
 				 saveID = filas[i].id;
 				 remove_f();
 				
-				 insere_fix(conf,save,back); //coloca no final da fila
+				 insere_fix(conf,save,saveId,back); //coloca no final da fila
 				 
 			 }
 		}
-		 else{
+		else{
 			printf("Nao foi enviar a mensagem\n");
 			remove_f(); //Desiste de enviar
-		 }
+		}
 		 pthread_mutex_unlock(&count_mutex);
 		 
 	 }
