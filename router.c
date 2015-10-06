@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <time.h>
 
 #define GETFILE 105
 #define MAXFILA 50
@@ -59,12 +60,12 @@ void enviarMsg(void){
 		scanf("%d", &destino);
 	printf("\n");
 	
-	pthread_mutex_lock(&count_mutex);
+	//pthread_mutex_lock(&count_mutex);
 	if(destino == myRouter->id){
 		printf("Enviar para mim mesmo?\n");
 		continue;
 	}
-	pthread_mutex_unlock(&count_mutex);
+	//pthread_mutex_unlock(&count_mutex);
 	if(!(destRouter = leInfos(rout_u, destino))){ printf("Destino invalido\n");}
 	
 	else{
@@ -99,7 +100,7 @@ void enviarMsg(void){
 		
 		insereFila(&mensg);
 	    printf("ID>::%d e %d\n", mensg.origem, mensg.destino);
-		pthread_mutex_unlock(&count_mutex);usleep(100000);
+		pthread_mutex_unlock(&count_mutex);usleep(2000000);
 		}
 	}
 	 
@@ -107,8 +108,7 @@ void enviarMsg(void){
 		//pthread_exit(NULL);
 	
 }
-
-void encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
+int encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
 	//struct sockaddr_in si_other;
 	//int s;
 	int i;
@@ -122,7 +122,7 @@ void encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
 				buf->nextH = myConnect[myRouter->id-1].idImediato[i];
 				
 				if(!(destRouter = leInfos(rout_u, buf->nextH))){
-					printf("Destino nao e valido\n");return;
+					printf("Destino nao e valido\n");return 0;
 				}
 				printf("next %d p %d \n", buf->nextH, destRouter->port); 
 				break;
@@ -141,15 +141,16 @@ void encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
 	
 	if (inet_aton(destRouter->ip , &etc->sin_addr) == 0) {
 		fprintf(stderr, "inet_aton() error\n");
-		exit(1);
+		return 0;
 	}
 	
 	if (sendto(s, buf, sizeof(msg), 0, (struct sockaddr *)etc, t) == -1) {
 		printf("Nao foi possivel encaminhar a mensagem()...\n");
+		return 0;
 	}
 	printf("Roteador : %d encaminhando msg de %d bytes para roteador : %d\n", myRouter->id, strlen(buf->text),destRouter->id); 
 	free(destRouter);
-	
+	return 1;
 	
 }
 
@@ -170,7 +171,7 @@ void server(void){ //Para receber as mensagens
 	si_me.sin_family = AF_INET;
 	si_me.sin_port = htons(myRouter->port);
 	si_me.sin_addr.s_addr = htonl(INADDR_ANY);
-	printf("T:%d %s %d\n\n", myRouter->id, myRouter->ip, myRouter->port);
+	//printf("T:%d %s %d\n\n", myRouter->id, myRouter->ip, myRouter->port);
 	if (bind(s , (struct sockaddr*)&si_me, sizeof(si_me)) == -1) {
 		printf("bind(). Porta ocupada?.\n");
 		exit(1);
@@ -198,6 +199,7 @@ void server(void){ //Para receber as mensagens
 			
 		}
 		else{ //caso este for o destino
+		puts("aqui");
 			msg *conf = malloc(sizeof(msg));
 			conf = copyData(conf, &mensg); 
 			if(!mensg.ack){ //se nao for msg de confirmacao
@@ -212,8 +214,9 @@ void server(void){ //Para receber as mensagens
 			}
 			else if(mensg.ack && mensg.entregue){//caso recebe a confirmacao
 				printf("Msg de %d para %d foi confirmada!!\n", myRouter->id, mensg.origem);
-				for(i = 0; i < tamanho; i++){
-					if(filas[i].mesg->idMsg == mensg.idMsg && filas[i].mesg->destino == myRouter->id)
+				printf("\n%d %d %d\n", filas[i].mesg->idMsg, mensg.idMsg, filas[i].mesg->destino);
+ 				for(i = 0; i < tamanho; i++){
+					if(filas[i].mesg->idMsg == mensg.idMsg && filas[i].mesg->origem == myRouter->id)
 						remove_fix(i);
 						break;
 					
@@ -230,6 +233,8 @@ void server(void){ //Para receber as mensagens
 void serverControl(){
 
   struct sockaddr_in controle;
+  time_t back;
+  int save,saveID;
   int s,i;
   //int a;
   msg buf;
@@ -266,11 +271,14 @@ void serverControl(){
 	 if(tamanho == 0)continue; //fila vazia
 	 
 	 for(i = 0; i < tamanho; i++){
-		 usleep(100000);
+		 printf("tammmm %d %d\n", tamanho, filas[0].tentativas);
+		 //usleep(100000);
+		 pthread_mutex_lock(&count_mutex);
 		 msg *conf = (msg *)malloc(sizeof(msg));
 	     
 		 
 		 if(filas[i].mesg->entregue == 1){ //caso recebeu o pacote
+			puts("entregue");
 			 filas[i].mesg->ack = 1; //confirma o pacote
 			 int aux = filas[i].mesg->origem;
 			 //modifica para enviar a confirmacao
@@ -280,34 +288,49 @@ void serverControl(){
 			 remove_f();
 			 
 		 }
-		 else if(filas[i].mesg->tentativas == 0){ //se a mensagem nao foi enviada, ou seja, veio do usuario
-			 encaminhaMsg(s,&controle,filas[i].mesg);
-			 filas[i].mesg->timestamp = time(0);
-			 filas[i].mesg->tentativas++;
-			 remove_f();
-			 conf = copyData(conf,filas[i].mesg);
-			 insereFila(conf); //coloca no final da fila
-			 
-		 }
-		 else if(filas[i].mesg->tentativas > 0 && filas[i].mesg->tentativas < 4){
-			 printf("Retransmissao\n");
-			 
-			 double tempo = difftime(time(0), filas[i].mesg->timestamp);
-			 
-			 if(filas[i].mesg->tentativas < 4 && tempo > 3){ //max 4 tentativas
-				
-				encaminhaMsg(s,&controle, filas[i].mesg);
-				filas[i].mesg->timestamp = time(0);
-				filas[i].mesg->tentativas++;
+		 else if(filas[i].tentativas == 0){ //se a mensagem nao foi enviada, ou seja, veio do usuario
+		 puts("orimero");
+		 
+			 if(encaminhaMsg(s,&controle,filas[i].mesg)==0)
 				remove_f();
+			 else{
+				filas[i].timestamp = time(0);
+				filas[i].tentativas++;
 				conf = copyData(conf,filas[i].mesg);
-				insereFila(conf);//coloca no final da fila
+				save = filas[i].tentativas;
+				back = filas[i].timestamp;
+				saveID = filas[i].id;
+				remove_f();
+				insere_fix(conf,save,back); //coloca no final da fila
 			 }
-			 else if(filas[i].mesg->tentativas < 4 && tempo <= 3){
+		 }
+		 else if(filas[i].tentativas > 0 && filas[i].tentativas < 3){
+			 
+			 
+			 double tempo = difftime(time(0), filas[i].timestamp);
+			 
+			 if(filas[i].tentativas < 3 && tempo > 2){ //max 3 tentativas
+				printf("Retransmissao\n");
+				encaminhaMsg(s,&controle, filas[i].mesg);
+				filas[i].timestamp = time(0);
+				filas[i].tentativas++;
+				conf = copyData(conf,filas[i].mesg);
+				save = filas[i].tentativas;
+				back = filas[i].timestamp;
+				saveID = filas[i].id;
+				remove_f();
+				
+				insere_fix(conf,save,back); //coloca no final da fila
+			 }
+			 else if(filas[i].tentativas < 3 && tempo <= 2){ //2s
 				// encaminhaMsg(s,&controle, filas[i].mesg);
-				 remove_f();
 				 conf = copyData(conf,filas[i].mesg);
-				 insereFila(conf);//coloca no final da fila
+				 save = filas[i].tentativas;
+				 back = filas[i].timestamp;
+				 saveID = filas[i].id;
+				 remove_f();
+				
+				 insere_fix(conf,save,back); //coloca no final da fila
 				 
 			 }
 		}
@@ -315,6 +338,7 @@ void serverControl(){
 			printf("Nao foi enviar a mensagem\n");
 			remove_f(); //Desiste de enviar
 		 }
+		 pthread_mutex_unlock(&count_mutex);
 		 
 	 }
     
@@ -349,6 +373,8 @@ int iniciaFila(){
 	for(i = 0; i < vertices; i++){
 		filas[i].mesg = NULL;
 		filas[i].id = 0;
+		filas[i].timestamp = 0;
+		filas[i].tentativas = 0;
 	}
 	//filas->next = NULL;
 	return 1;
@@ -368,14 +394,39 @@ void insereFila(msg *buf){
 		filas[tamanho].mesg = nova;
 		if(tamanho == 0){
 			filas[tamanho].id = filas[tamanho].mesg->idMsg = 1;
+			//filas[tamanho].timestamp = filas[tamanho].tentativas =0;
 			//filas[tamanho].mesg->idMsg = filas[tamanho].id = 1;
 		}
 		else{
 			filas[tamanho].id = filas[tamanho-1].id+1;
-			filas[tamanho].mesg->idMsg = filas[tamanho].id ;
+			filas[tamanho].mesg->idMsg = filas[tamanho].id;
+			//filas[tamanho].timestamp = filas[tamanho].tentativas =0;
 		}
 		tamanho++;
 	}
+}
+
+void insere_fix(msg *buf, int save, int saveID, time_t back){
+//Para reinsercao	
+	msg *nova = (msg *)malloc(sizeof(msg));
+	
+	if(!filas){
+		printf("Impossivel inserir. Problema com a fila\n");
+		return;
+	}
+	
+	else{
+		nova = copyData(nova,buf);
+		
+		filas[tamanho].mesg = nova;
+		filas[tamanho].id = saveID;
+		filas[tamanho].tentativas = save;
+		filas[tamanho].timestamp = back;
+		
+		tamanho++;
+	}
+	
+	
 }
 
 void remove_f(){
@@ -441,7 +492,7 @@ int main(int argc, char *arq[]){
   
   int count = vertices;
   int i,j;
-  for(i = 0; i < 1; i++){                                                 
+  for(i = routerId-1; i < routerId; i++){                                                 
     for(j = 0; j  <count; j++){                                                 
       if(i!=j)                                                                  
         printf("%d ", myConnect[i].idVizinho[j]);                               

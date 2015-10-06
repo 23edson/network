@@ -28,6 +28,8 @@ typedef struct mensagem{
 }msg;
 
 typedef struct fila{
+	time_t timestamp;
+	int tentativas;
 	int id;
 	msg *mesg;
 }fila_t;
