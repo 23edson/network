@@ -3,7 +3,7 @@
 
 #define CONST 40 //constante para tamanho de arquivo
 #define IP 15
-
+#define MAX_PARENT 100
 int vertices;
 
 //tabela de roteamento
@@ -18,13 +18,15 @@ typedef struct mensagem{
   int idMsg; //identificador da msg
   int origem; //quem enviou
   int destino; //para onde vai
-  int entregue; //flag diz que chegou ao destino
+  //int entregue; //flag diz que chegou ao destino
   int nextH; //próximo roteador no caminho
   char ip[IP]; //ip de quem enviou
   char text[105]; //mensagem
-  time_t timestamp;
-  int tentativas; //tentativas de envio
+  int pSize;
+  //time_t timestamp;
+//  int tentativas; //tentativas de envio
   int ack; //flag para confirmacao
+  int parent[MAX_PARENT]; //vetor de parent para o caso de info
 }msg;
 
 typedef struct fila{
