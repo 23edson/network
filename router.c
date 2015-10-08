@@ -173,6 +173,8 @@ int encaminhaMsg(int s, struct sockaddr_in *etc, msg_t *buf){
 			}
 		}
 	} 
+	
+	
 	etc->sin_port = htons(destRouter->port); //especifica a porta do socket
 	
 	if (inet_aton(destRouter->ip , &etc->sin_addr) == 0) {//Associa o IP
@@ -185,8 +187,7 @@ int encaminhaMsg(int s, struct sockaddr_in *etc, msg_t *buf){
 		return 0;
 	}
 	if(!buf->ack) //define os formatos de msg de apresentação para o usuário
-		printf("\nRoteador : %d encaminhando msg #%d de %d bytes para roteador : %d\n", 
-		myRouter->id,buf->idMsg, strlen(buf->text)-1,destRouter->id); 
+		printf("\nRoteador : %d encaminhando msg #%d de %d bytes para roteador : %d\n", myRouter->id,buf->idMsg, (int )strlen(buf->text),destRouter->id); 
 	else
 		printf("\nRoteador : %d enviando confirmacao de pacote #%d para rot. %d\n", myRouter->id, buf->idMsg, destRouter->id);
 	
@@ -372,7 +373,7 @@ void serverControl(){
 					insere_fix(conf, save, saveId, back);//tem efeito de pegar o primeiro e colocar por último na fila, mantendo os atributos
 				}
 			}
-			else if(filas[i].tentativas > MAX_TENTATIVAS && filas[i].tentativas < MAX_TENTATIVAS){
+			else if(filas[i].tentativas > 0 && filas[i].tentativas < MAX_TENTATIVAS){
 				double tempo = difftime(time(0), filas[i].timestamp);
 			 
 				 if(filas[i].tentativas < MAX_TENTATIVAS && tempo > TIMEOUT){ //max 3 tentativas
