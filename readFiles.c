@@ -1,7 +1,13 @@
-//Dijktra code
-//http://www.vivaolinux.com.br/script/Algoritmo-de-Dijkstra
+/**
+ * Compilado com a versão:
+ * 		-gcc version 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
+ * Linux Ubuntu 12.04LTS
+ * 
+ * Dijktra code
+ *   -http://www.vivaolinux.com.br/script/Algoritmo-de-Dijkstra
+ *
+ **/
 
-#include <string.h>
 #include <math.h>
 #include "funcs.h"
 
@@ -14,14 +20,14 @@ int *cost;
 
 
 int countIn(char rot[CONST]){
-  //Conta a qtd de vértice 
+  //Conta a quantidade de vértices 
   FILE *arq;
   int i,adj;
   int count = 0;
   char ip[CONST];
   
   if(!(arq = fopen(rot,"r"))){
-    printf("Nao consegui abrir a bagaça\n");
+    printf("Arquivo roteador.config nao foi encontrado\n");
     return 0;
   }
   while(fscanf(arq,"%d %d %s", &i, &adj, ip)!=EOF)count++;
@@ -31,7 +37,12 @@ int countIn(char rot[CONST]){
 
 }
 
-tabela *dijkstra(int vertex, int font, int recpt, tabela *myConnect){
+
+/**
+ * Computa os caminhos mínimos de todo mundo para todo mundo 
+ * 
+ **/
+tabela_t *dijkstra(int vertex, int font, int recpt, tabela_t *myConnect){
 
   int i,v,flag=0;
   
@@ -47,75 +58,135 @@ tabela *dijkstra(int vertex, int font, int recpt, tabela *myConnect){
   if(!(ant || tmp || new))return NULL;
 
   for(i = 0; i < vertex; i++){
-    if(cost[(font-1)*vertex + i] != -1){
-      ant[i] = font-1;
-      dist[i] = cost[(font-1)*vertex+i];
-    }
-    else{
-      ant[i] = -1;
-      dist[i] = HUGE_VAL; //infinito
-    }
-    new[i] = 0;
+		if(cost[(font-1)*vertex + i] != -1){
+			ant[i] = font-1;
+			dist[i] = cost[(font-1)*vertex+i];
+		}
+		else{
+			ant[i] = -1;
+			dist[i] = HUGE_VAL; //infinito
+		}
+		new[i] = 0;
   }
   new[font-1] = 1;
   dist[font-1] = 0; //dist dele mesmo é zero
   
   do{
 
-    //procura o vertices de menor custo para entra no vetor new
-    menor = HUGE_VAL;
-    for(i=0;i<vertex;i++){
-      if(!new[i])
-	if(dist[i]>=0 && dist[i] < menor){
-	  menor=dist[i];
-	  v=i;
-	}
-    }
-    //calcula as distancias dos vizinhos a partir dos vertices em new
-    if(menor != HUGE_VAL && v!= recpt-1){
-      new[v] = 1;
-      for(i=0;i<vertex;i++)
-	if(!new[i]){
-	  if(cost[v*vertex+i]!= -1 && dist[v] + cost[v*vertex+i] < dist[i]){
-	    dist[i] = dist[v] + cost[v*vertex+i];
-	    ant[i] = v;
-	  }
-	}
-    }
+		//procura o vertices de menor custo para entra no vetor new
+		menor = HUGE_VAL;
+		for(i=0;i<vertex;i++){
+			if(!new[i])
+				if(dist[i]>=0 && dist[i] < menor){
+					menor=dist[i];
+					v=i;
+				}
+		}
+		//calcula as distancias dos vizinhos a partir dos vertices em new
+		if(menor != HUGE_VAL && v!= recpt-1){
+			new[v] = 1;
+			for(i=0;i<vertex;i++)
+			if(!new[i]){
+				if(cost[v*vertex+i]!= -1 && dist[v] + cost[v*vertex+i] < dist[i]){
+					dist[i] = dist[v] + cost[v*vertex+i];
+					ant[i] = v;
+				}
+			}
+		}
   }while(v!= recpt-1 && menor!=HUGE_VAL);
   
-  // puts("oo");
-  //  printf("i>%d recpi  %d > %d ",i, font,recpt);
+  
   if(menor != HUGE_VAL){
-    //printf("i>%d recpi > %d ", i,recpt); 
-    i = recpt;
-    i = ant[i-1];
-    while(i != -1){
-      tmp[flag] = i+1;
-      flag++;
-      i = ant[i];
-    }
-    i = flag;
-    // printf("i :===  %d ", i);
     
-    //printf("\nCusto:  %d,f:%d, r:%d\n",(int) dist[recpt-1],font-1,recpt-1);
+		i = recpt;
+		i = ant[i-1];
+		while(i != -1){
+			tmp[flag] = i+1;
+			flag++;
+			i = ant[i];
+		}
+		i = flag;
+  
+        //organiza os caminhos na tabela de roteamento
+		myConnect[font-1].idVizinho[recpt-1] = recpt;
+		myConnect[font-1].custo[recpt-1] = (int) dist[recpt-1];
+		if( flag > 1)
+			myConnect[font-1].idImediato[recpt-1] = tmp[flag-2];
+		else
+			myConnect[font-1].idImediato[recpt-1] = recpt;
 
-    //  printf(" i>%d recpi  %d > %d > %d > %d ",i, font,recpt, (int) dist[recpt-1], tmp[flag-2]);
     
-    myConnect[font-1].idVizinho[recpt-1] = recpt;
-    myConnect[font-1].custo[recpt-1] = (int) dist[recpt-1];
-    if( flag > 1)
-      myConnect[font-1].idImediato[recpt-1] = tmp[flag-2];
-    else
-      myConnect[font-1].idImediato[recpt-1] = recpt;
-
-    //puts("here");
   }
 
   free(dist);free(ant);free(tmp);free(new);
 
   return myConnect;
 }
+
+//Esta função contabilidade para cada vertice, o caminho mínimo para todos os demais
+tabela_t *leEnlaces( char enl[CONST], int count){
+
+  tabela_t *myConnect;
+  FILE *arq;
+  int i,adj,custo,j;
+
+  if(!(myConnect = (tabela_t *)malloc(sizeof(tabela_t)*count)))
+		return NULL;
+
+  for(i = 0; i < count ; i++){
+    if(!(myConnect[i].idVizinho = (int *)malloc(sizeof(int)*(count))) ||
+       (!(myConnect[i].custo = (int *)malloc(sizeof(int)*(count)))) ||
+       (!(myConnect[i].idImediato = (int *)malloc(sizeof(int)*(count)))))
+      return NULL;
+      
+  }
+
+  if(!(cost = (int *)malloc(sizeof(int)*(count*count))))
+		return NULL;
+
+  if(!(arq = fopen(enl,"r"))) return NULL;
+
+   //inicializa vetor de custo
+  for(i=0; i<= count*count;i++)cost[i] = -1;
+  //lê arestas com respectivos custos
+  while(fscanf(arq,"%d %d %d", &i, &adj, &custo) != EOF){
+		cost[(i-1)*count + adj - 1] = custo;
+		cost[(adj-1)*count + i - 1] = custo;
+  }
+  
+  for(i = 1; i <= count; i++)
+		for(j = 1; j <= count;j++)
+			if(i!=j){
+				myConnect = dijkstra(count,i,j,myConnect);
+			}
+
+ 
+
+  return myConnect;
+}
+
+
+//Devolve as informações sobre o roteador X, isto é (id, porta, ip)
+router_t *leInfos(char rout[CONST], int id){
+
+	FILE *arq = fopen(rout, "r");
+	router_t *myRouter = (router_t *)malloc(sizeof(router_t)*1);
+
+	if(!myRouter)return NULL;
+
+	if(!arq)return NULL;
+
+	while(fscanf(arq,"%d %d %s", &(myRouter->id), &(myRouter->port), myRouter->ip)!=EOF){
+		if(id == myRouter->id)break;
+	}
+
+	if(id != myRouter->id){return NULL;}
+
+	fclose(arq);
+	return myRouter;
+}
+
+
 
 
 /*void dijkstra(int vertices,int origem,int destino)
@@ -204,93 +275,3 @@ double dist[vertices]; // vetor com os custos dos caminhos
 }
 
 */
-tabela *leEnlaces( char enl[CONST], int count){
-
-  tabela *myConnect;
-  FILE *arq;
-  int i,adj,custo,j;
-
-  if(!(myConnect = (tabela *)malloc(sizeof(tabela)*count)))
-    return NULL;
-
-  for(i = 0; i < count ; i++){
-    if(!(myConnect[i].idVizinho = (int *)malloc(sizeof(int)*(count))) ||
-       (!(myConnect[i].custo = (int *)malloc(sizeof(int)*(count)))) ||
-       (!(myConnect[i].idImediato = (int *)malloc(sizeof(int)*(count)))))
-      return NULL;
-      
-  }
-
-  
-  
-  if(!(cost = (int *)malloc(sizeof(int)*(count*count))))
-    return NULL;
-
-  if(!(arq = fopen(enl,"r"))) return NULL;
-
-  //inicializa vetor de custo
-  for(i=0; i<= count*count;i++)cost[i] = -1;
-  //lê arestas com respectivos custos
-  while(fscanf(arq,"%d %d %d", &i, &adj, &custo) != EOF){
-    cost[(i-1)*count + adj - 1] = custo;
-    cost[(adj-1)*count + i - 1] = custo;
-  }
-  //puts("j");
-  for(i = 1; i <= count; i++)
-    for(j = 1; j <= count;j++)
-      if(i!=j){
-		myConnect = dijkstra(count,i,j,myConnect);
-      }
-
-  //puts("je");
-  /*for(i = 0; i < count; i++){
-    for(j = 0; j  <count; j++){
-      if(i!=j)
-	printf("%d ", myConnect[i].idVizinho[j]);
-    }printf("\n");
-    for(j = 0; j  <count; j++){
-      if(i!=j)
-        printf("%d ", myConnect[i].custo[j]);
-    }printf("\n");
-    for(j = 0; j  <count; j++){
-      if(i!=j)
-        printf("%d ", myConnect[i].idImediato[j]);
-    }printf("\n");
-  
-    }
-  */
-
-  return myConnect;
-}
-
-router *leInfos(char rout[CONST], int id){
-
-  FILE *arq = fopen(rout, "r");
-  router *myRouter = (router *)malloc(sizeof(router)*1);
-  int i = 0;
-  if(!myRouter)return NULL;
-  //int i,j;
-  if(!arq)return NULL;
-
-	
-  
-  while(fscanf(arq,"%d %d %s", &(myRouter->id), &(myRouter->port), myRouter->ip)!=EOF){
-    if(id == myRouter->id)break;
-	}
-
-  if(id != myRouter->id){return NULL;}
-
-  fclose(arq);
-  return myRouter;
-}
-
-/*int main(){
-
-  char enl[CONST] = "enlaces.config";
-  char rot[CONST] = "roteador.config";
-
-  leEnlaces(enl,countIn(rot));
-
-
-  return 0;
-  }*/
