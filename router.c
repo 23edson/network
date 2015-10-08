@@ -204,15 +204,18 @@ int encaminhaMsg(int s, struct sockaddr_in *etc, msg *buf){ //
 		printf("Nao foi possivel encaminhar a mensagem()...\n");
 		return 0;
 	}
-	printf("\nRoteador : %d encaminhando msg de %d bytes para roteador : %d\n", myRouter->id, strlen(buf->text)-1,destRouter->id); 
-	//free(destRouter);
+	if(!buf->ack)
+		printf("\nRoteador : %d encaminhando msg #%d de %d bytes para roteador : %d\n", myRouter->id,buf->idMsg, strlen(buf->text)-1,destRouter->id); 
+	else
+		printf("\nRoteador : %d enviando confirmacao de pacote #%d para rot. %d\n", myRouter->id, buf->idMsg, destRouter->id);
+	free(destRouter);
 	return 1;
 	
 }
 
 void server(void){ //Para receber as mensagens
 	
-	int s, recv_len,i;
+	int s, recv_len,i,flag = 0;
 	struct sockaddr_in si_me, si_other;
 	int slen = sizeof(si_other);
 	msg mensg;
@@ -253,29 +256,44 @@ void server(void){ //Para receber as mensagens
 		if((mensg.destino != myRouter->id) && (mensg.ack == 0)){ //caso este nao for o destino
 			//printf("caso");
 			//msg *r = malloc(sizeof(msg));
-			msg *confr = malloc(sizeof(msg));
+			
+			for(i = 0; i < tamanho; i++){ //ignorar pacotes ja recebidos
+				
+				if(mensg.idMsg == filas[i].mesg->idMsg && mensg.nextH == myRouter->id){
+					flag = 1;
+					break;
+				}
+				
+			}
+			if(!flag){//se a mensagem nao é repetida
+				msg *confr = malloc(sizeof(msg));
 			
 			
-			mensg.parent[mensg.pSize++] = myRouter->id;
-			confr = copyData(confr,&mensg);
-			//printf("detr %d %d %d %d %d\n", confr->pSize, confr->destino, confr->idMsg, confr->nextH, confr->origem);
-			insereFila(confr);
-			//r = copyData(r,&mensg);
-			//confr->ack = 1;
-			//confr = message_fix(confr, mensg.nextH, mensg.origem);
-			//int back = mensg.origem;
-			//confr->origem = mensg.nextH;
-			//confr->destino = back;
+				mensg.parent[mensg.pSize++] = myRouter->id;
+				confr = copyData(confr,&mensg);
+				//printf("detr %d %d %d %d %d\n", confr->pSize, confr->destino, confr->idMsg, confr->nextH, confr->origem);
+				insereFila(confr);
+				//r = copyData(r,&mensg);
+				//confr->ack = 1;
+				//confr = message_fix(confr, mensg.nextH, mensg.origem);
+				//int back = mensg.origem;
+				//confr->origem = mensg.nextH;
+				//confr->destino = back;
 			
-			//insereFila(r);
+				//insereFila(r);
 			
+			}
+			flag=0;
 		}
 		else{ //caso este for o destino
 		//puts("aqui");
-			 msg *conf = malloc(sizeof(msg));
+		
+			
+			
+			msg *conf = malloc(sizeof(msg));
 			if(!mensg.ack){ //se nao for msg de confirmacao
-					//insereFila(conf);
-				
+				//insereFila(conf);
+					
 				/*int back = mensg.origem;
 				conf->origem = mensg.nextH;
 				conf->destino = back;*/
@@ -285,10 +303,10 @@ void server(void){ //Para receber as mensagens
 				//conf = message_fix(conf, mensg.nextH, mensg.origem);
 				printf("\nRoteador : %d recebeu a msg de %d\n", myRouter->id, mensg.origem);
 				printf("Msg: %s\n", mensg.text);
-				
+					
 				insereFila(conf);
-				
-				
+					
+					
 				//conf->entregue = 1;
 				//conf = &mensg;
 				//insereFila(conf);
@@ -298,17 +316,16 @@ void server(void){ //Para receber as mensagens
 			else{//caso recebe a confirmacao
 				//printf("mens %d %d\n", mensg.pSize, mensg.origem);
 				for(i = 0; i < tamanho; i++){
-					if(filas[i].mesg->parent[filas[i].mesg->pSize] == myRouter->id && filas[i].mesg->origem == mensg.origem){
+					if(mensg.parent[mensg.pSize] == myRouter->id && filas[i].mesg->origem == mensg.origem){
 						remove_fix(i);
 						//puts("entrei nessa buraca\n");
 						break;
 					}
-					
 				}
 				
 				
 				if(mensg.origem == myRouter->id){
-					printf("Mensagem confirmada!!\n");
+					printf("\nMensagem confirmada!!\n");
 					//printf("\nv : %d %d\n", mensg.idMsg, mensg.destino);
 					//printf("msg %d\n", tamanho);
 				
@@ -322,8 +339,9 @@ void server(void){ //Para receber as mensagens
 		}
 		pthread_mutex_unlock(&count_mutex);
 	}
-	
 }
+	
+
 
 void serverControl(){
 	//puts("zxsa");
@@ -420,7 +438,7 @@ void serverControl(){
 			 double tempo = difftime(time(0), filas[i].timestamp);
 			 
 			 if(filas[i].tentativas < 3 && tempo > 2){ //max 3 tentativas
-				printf("Retransmissao\n");
+				printf("\nRetransmissao\n");
 				if(encaminhaMsg(s,&controle, filas[i].mesg)==0){
 					remove_f();
 				}
@@ -563,7 +581,7 @@ void remove_f(){
 	//puts("lppp");
 	int i;
 	//msg copy;
-	//free(filas[0].mesg-);
+	//free(filas[0].mesg);
 	free(filas[0].mesg);
 	filas[0].mesg = NULL; 
 	for(i = 1; i < tamanho; i++){
@@ -590,7 +608,7 @@ void remove_fix(int i){
 	}
 	else{ //caso for algum intermediario
 		for(j = i; j < tamanho-1; j++){
-			free(filas[j].mesg->parent);
+			//free(filas[j].mesg);
 			free(filas[j].mesg);
 			filas[j].mesg = filas[j+1].mesg;
 			
@@ -650,16 +668,16 @@ int main(int argc, char *arq[]){
   pthread_create(&tids[1], NULL, (void *)enviarMsg, NULL);
   pthread_create(&tids[2], NULL, (void *)serverControl, NULL);
   
-  /*pthread_join(tids[1], NULL);
+  pthread_join(tids[1], NULL);
   pthread_cancel(tids[0]);
   pthread_cancel(tids[2]);
   pthread_join(tids[0], NULL);
   pthread_join(tids[2], NULL);
-  */
   
-  pthread_join(tids[1], NULL);
-  pthread_join(tids[0], NULL);
-  pthread_join(tids[2], NULL);
+  
+  //pthread_join(tids[1], NULL);
+  //pthread_join(tids[0], NULL);
+  //pthread_join(tids[2], NULL);
  //pthread_create(&tids[1], NULL, enviarMsg, NULL);
   //pthread_create(&tids[0], NULL, server, NULL);
   
@@ -690,6 +708,3 @@ int main(int argc, char *arq[]){
      
   return 0;
 }
-
-
-
