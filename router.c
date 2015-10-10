@@ -21,11 +21,21 @@
  * encaminhamento, ou seja, para o caso de o roteador que recebeu o pacote não ser o
  * destino final, outra possibilidade é quando o roteador é o destino, e a última para
  * o caso de ser uma mensagem de confirmação.
+ * 
+ * Para o caso de envio de pacotes, é necessário assegurar um tempo finito de tentativas,
+ * deste modo, quando uma mensagem é escalonada para envio, é definido por padrão um tempo
+ * de espera(TIMEOUT) de 2 segundos. Contudo, também é definido uma quantidade finita de 
+ * tentativas, neste caso são 3 tentativas; isto nos da um tempo total de 6 segundos para
+ * cada pacote.
  *
  * Cada roteador dispõe de uma tabela de roteamento, nela estão colocadas informações 
  * sobre todos os roteadores, assim, para cada um deles está definido o próximo salto
  * (NextHop), seguido pelo custo mínimo para o destino a partir da origem calculada
  * por uma função de Dijkstra.
+ *
+ * A implementação de mensagens de confirmação funciona da seguinte maneira: quando uma
+ * mensagem é roteada da origem até o destino, cada roteador do caminho é marcado em um
+ * vetor de parent, assim a confirmação é propagada do destino até a origem.
  *
  * A aplicação permite o envio de mensagens, para isto cada roteador implementa uma
  * interface de interação com o usuário, isto é através de uma thread são recebidos
