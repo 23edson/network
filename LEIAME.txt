@@ -8,6 +8,8 @@ Para compilação foi usado:
 
      gcc funcs.h readFiles.c router.c -D_REENTRANT -lpthread -o m -Wall
 
+Também pode ser usado o Makefile usando o comando 'make'
+
 Para instanciar um roteador é preciso passar como argumento na linha de
 comandos o seu ID. Exemplo : ./m 1
 
