@@ -4,6 +4,34 @@
  * 		-gcc version 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
  * Linux Ubuntu 12.04LTS
  *
+ * Este programa representa um roteador, onde o seu objetivo é 'rotear' pacotes
+ * UDP da origem até o destino. O programa recebe  um argumenta da linha de comandos, sendo
+ * um número inteiro que representa o ID do roteador sendo instanciado.
+ *
+ * Primeiramente, é lido a partir de dois arquivos informações sobre os enlaces
+ * e os roteadores, sendo eles "enlaces.config" e "roteador.config" respectivamente.Para
+ * fins de simplicidade, é assumido que ambos os arquivos estão no diretório deste
+ * código-fonte. A topologia da rede é estática, ou seja, não sofre alterações durante 
+ * o seu ciclo de vida. 
+ *
+ * O processamento dos pacotes é realizado com o uso de uma fila simples, onde os pacotes
+ * são dispostos na fila de modo que o primeiro da fila é o primeiro a ser atendido (FIFO),
+ * com excessão de mensagens de confirmação(ACK), estas são removidas da fila assim que
+ * recebidas. Este escalonamento refere-se a quaisquer tipo de mensagem, seja ela de
+ * encaminhamento, ou seja, para o caso de o roteador que recebeu o pacote não ser o
+ * destino final, outra possibilidade é quando o roteador é o destino, e a última para
+ * o caso de ser uma mensagem de confirmação.
+ *
+ * Cada roteador dispõe de uma tabela de roteamento, nela estão colocadas informações 
+ * sobre todos os roteadores, assim, para cada um deles está definido o próximo salto
+ * (NextHop), seguido pelo custo mínimo para o destino a partir da origem calculada
+ * por uma função de Dijkstra.
+ *
+ * A aplicação permite o envio de mensagens, para isto cada roteador implementa uma
+ * interface de interação com o usuário, isto é através de uma thread são recebidos
+ * um destino e uma mensagem lida do teclado. Posteriormente esta mensagem é posta
+ * na fila para o escalonamento.
+ * 
  **/
 
 
