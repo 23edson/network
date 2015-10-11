@@ -9,14 +9,14 @@
  * um número inteiro que representa o ID do roteador sendo instanciado.
  *
  * Primeiramente, é lido a partir de dois arquivos informações sobre os enlaces
- * e os roteadores, sendo eles "enlaces.config" e "roteador.config" respectivamente.Para
+ * e os roteadores, sendo eles "enlaces.config" e "roteador.config" respectivamente. Para
  * fins de simplicidade, é assumido que ambos os arquivos estão no diretório deste
  * código-fonte. A topologia da rede é estática, ou seja, não sofre alterações durante 
  * o seu ciclo de vida. 
  *
  * O processamento dos pacotes é realizado com o uso de uma fila simples, onde os pacotes
  * são dispostos na fila de modo que o primeiro da fila é o primeiro a ser atendido (FIFO),
- * com excessão de mensagens de confirmação(ACK), estas são removidas da fila assim que
+ * com exceção de mensagens de confirmação(ACK), estas são removidas da fila assim que
  * recebidas. Este escalonamento refere-se a quaisquer tipo de mensagem, seja ela de
  * encaminhamento, ou seja, para o caso de o roteador que recebeu o pacote não ser o
  * destino final, outra possibilidade é quando o roteador é o destino, e a última para
